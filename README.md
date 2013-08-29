@@ -3,7 +3,7 @@ codetree
 
 Codetree is a tool for assembling directories of code from disparate sources. You might, for example, want to keep your application code separate from your deployment code and local configuration, then bring them all together as part of your build process. Codetree helps you do that.
 
-As a replacement for [config-manager]https://launchpad.net/config-manager, codetree is a bit more modern and, I hope, more extensible. Similar to config-manager, it was built for use at Canonical to pull together bzr-based repositories, but inspired by the need to grab individual files or archives via HTTP(S).
+As a replacement for [config-manager](https://launchpad.net/config-manager), codetree is a bit more modern and, I hope, more extensible. Similar to config-manager, it was built for use at Canonical to pull together bzr-based repositories, but inspired by the need to grab individual files or archives via HTTP(S).
 
 But enough about me...
 
