@@ -44,8 +44,16 @@ class BzrSourceHandler(SourceHandler):
         elif os.path.exists(dest):
             logging.info("Skipping existing dest {}".format(dest))
             return
+        parent_dir = os.path.dirname(dest)
+        if parent_dir and not os.path.exists(parent_dir):
+            os.makedirs(parent_dir)
         cmd = ('bzr', 'branch', self.source, dest)
-        subprocess.check_call(cmd)
+        logging.info("Branching {} to {}".format(self.source, dest))
+        try:
+            with open(os.devnull) as devnull:
+                subprocess.check_output(cmd, stderr=devnull)
+        except subprocess.CalledProcessError, e:
+            logging.error(e.output)
         if "revno" in options:
             cmd = ('bzr', 'update', 'dest', '-r', options['revno'])
 
@@ -67,7 +75,11 @@ class HttpFileHandler(SourceHandler):
             else:
                 logging.info("Skipping existing dest ()".format(dest))
                 return
-        response = urllib2.urlopen(self.source)
+        logging.info("Downloading {} to {}".format(self.source, dest))
+        try:
+            response = urllib2.urlopen(self.source)
+        except urllib2.URLError as e:
+            logging.error("Failed to download {}: {}".format(self.source, e.reason))
         with open(dest, "w") as f:
             f.write(response.read())
 
@@ -89,11 +101,14 @@ class LocalHandler(SourceHandler):
                 logging.info("Skipping existing dest {}".format(dest))
         path = urlparse(self.source).path
         if path == "@":
+            logging.info("Creating directory {}".format(dest))
             os.makedirs(dest)
         else:
             if os.path.isdir(self.source):
+                logging.info("Copying directory {} to {}".format(self.source, dest))
                 shutil.copytree(self.source, dest, symlinks=True)
             elif os.path.isfile(self.source):
+                logging.info("Copying file {} to {}".format(self.source, dest))
                 shutil.copy(self.source, self.dest)
 
 
