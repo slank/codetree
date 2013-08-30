@@ -51,8 +51,10 @@ Sources may accept various arguments. As in the lp:myapp-woohoo example above, y
 
 There are currently three handlers, each registered for a number of URL schemes:
 
-Bzr: bzr, bzr+ssh, lp, bzr+http, bzr+https
-HTTP/S: http, https
-Local: (empty scheme)
+* Bzr: bzr, bzr+ssh, lp, bzr+http, bzr+https
+* HTTP/S: http, https
+* Local: (empty scheme)
 
 If you're familiar with Bzr, you'll note that bzr+http and bzr+https are not valid schemes for Bzr URLs. No two handlers may handle the same scheme. In order to defnintively identify the handler you want for a source, the scheme you use may be slightly non-standard.
+
+Other handlers are planned, such as an archive handler (variant of the http/s handler) and a git handler.
