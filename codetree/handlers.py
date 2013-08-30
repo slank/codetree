@@ -5,6 +5,8 @@ import os
 import logging
 import urllib2
 
+import fileutils
+
 
 class SourceHandler(object):
     handlers = {}
@@ -36,10 +38,10 @@ class BzrSourceHandler(SourceHandler):
         else:
             self.source = source
 
-    def get(self, dest, options=None, overwrite=False):
+    def get(self, dest, options=None):
         if not options:
             options = {}
-        if overwrite and os.path.exists(dest):
+        if options.get("overwrite") and os.path.exists(dest):
             shutil.rmtree(dest)
         elif os.path.exists(dest):
             logging.info("Skipping existing dest {}".format(dest))
@@ -66,11 +68,11 @@ class HttpFileHandler(SourceHandler):
         "https",
     )
 
-    def get(self, dest, options=None, overwrite=False):
+    def get(self, dest, options=None):
         if not options:
             options = {}
         if os.path.exists(dest):
-            if overwrite:
+            if options.get("overwrite"):
                 os.unlink(dest)
             else:
                 logging.info("Skipping existing dest ()".format(dest))
@@ -90,26 +92,28 @@ class LocalHandler(SourceHandler):
 
     schemes = ('',)
 
-    def get(self, dest, options=None, overwrite=False):
-        if os.path.exists(dest):
-            if overwrite:
-                if os.path.isdir(dest):
-                    shutil.rmtree(dest)
-                else:
-                    os.unlink(dest)
-            else:
-                logging.info("Skipping existing dest {}".format(dest))
-        path = urlparse(self.source).path
-        if path == "@":
+    def get(self, dest, options=None):
+        if not options:
+            options = {}
+
+        if dest == "@":
             logging.info("Creating directory {}".format(dest))
-            os.makedirs(dest)
-        else:
-            if os.path.isdir(self.source):
-                logging.info("Copying directory {} to {}".format(self.source, dest))
-                shutil.copytree(self.source, dest, symlinks=True)
-            elif os.path.isfile(self.source):
-                logging.info("Copying file {} to {}".format(self.source, dest))
-                shutil.copy(self.source, self.dest)
+            fileutils.mkdir(dest, overwrite=options.get("overwrite", False))
+            return
+
+        method = options.get("method", "copy")
+        if method == "copy":
+            logging.info("Copying {} to {}".format(self.source, dest))
+            fileutils.copy(self.source, dest)
+        elif method == "rsync":
+            logging.info("Rsyncing {} to {}".format(self.source, dest))
+            fileutils.rsync(self.source, dest)
+        elif method == "link":
+            logging.info("Creating symbolic link {} to {}".format(dest, self.source))
+            fileutils.link(self.source, dest)
+        elif method == "hardlink":
+            logging.info("Creating hard link {} to {}".format(dest, self.source))
+            fileutils.link(self.source, dest, symbolic=False)
 
 
 class DuplicateHandlerError(Exception):
