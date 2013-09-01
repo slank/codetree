@@ -24,14 +24,10 @@ def log_failure(cmd, message):
 
 
 class SourceHandler(object):
-    handlers = {}
+    schemes = tuple()
 
     def __init__(self, source):
         self.source = source
-
-    @classmethod
-    def handler_for(cls, url):
-        return (h for h in cls.handlers if h.can_handle(url))
 
 
 class BzrSourceHandler(SourceHandler):
