@@ -90,7 +90,10 @@ class LocalHandler(SourceHandler):
     """Copy local files. The special source '@' indicates that the destination
     is a directory."""
 
-    schemes = ('',)
+    schemes = (
+        '',
+        'file',
+    )
 
     def get(self, dest, options=None):
         if not options:
