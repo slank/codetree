@@ -75,7 +75,7 @@ class HttpFileHandler(SourceHandler):
             if options.get("overwrite"):
                 os.unlink(dest)
             else:
-                logging.info("Skipping existing dest ()".format(dest))
+                logging.info("Skipping existing dest {}".format(dest))
                 return
         logging.info("Downloading {} to {}".format(self.source, dest))
         try:
