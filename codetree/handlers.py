@@ -1,11 +1,26 @@
+from __future__ import print_function
 from urlparse import urlparse
 import shutil
-import subprocess
+from subprocess import (
+    Popen,
+    PIPE,
+    check_output,
+    CalledProcessError,
+)
 import os
 import logging
 import urllib2
 
 import fileutils
+
+
+def log_failure(cmd, message):
+    try:
+        with open(os.devnull) as devnull:
+            logging.info(message)
+            check_output(cmd, stderr=devnull)
+    except CalledProcessError, e:
+        logging.error(e.output)
 
 
 class SourceHandler(object):
@@ -38,26 +53,49 @@ class BzrSourceHandler(SourceHandler):
         else:
             self.source = source
 
-    def get(self, dest, options=None):
-        if not options:
-            options = {}
-        if options.get("overwrite") and os.path.exists(dest):
-            shutil.rmtree(dest)
-        elif os.path.exists(dest):
-            logging.info("Skipping existing dest {}".format(dest))
-            return
+    def checkout_branch(self, dest):
         parent_dir = os.path.dirname(dest)
         if parent_dir and not os.path.exists(parent_dir):
             os.makedirs(parent_dir)
         cmd = ('bzr', 'branch', self.source, dest)
-        logging.info("Branching {} to {}".format(self.source, dest))
-        try:
-            with open(os.devnull) as devnull:
-                subprocess.check_output(cmd, stderr=devnull)
-        except subprocess.CalledProcessError, e:
-            logging.error(e.output)
+        log_failure(cmd, "Branching {} to {}".format(self.source, dest))
+
+    def update_branch(self, dest):
+        cmd = ("bzr", "pull", "-d", dest)
+        log_failure(cmd, "Updating {} from parent ({})".format(dest, self.source))
+
+    def revno_branch(self, dest, revno):
+        cmd = ('bzr', 'update', dest, '-r', revno)
+        log_failure(cmd, "Checking out revision {} of {}".format(revno, self.source))
+
+    def is_same_branch(self, dest):
+        bzr_cmd = ("bzr", "info", dest)
+        grep_cmd = ("grep", "parent branch")
+        bzr_call = Popen(bzr_cmd, stdout=PIPE)
+        grep_call = Popen(grep_cmd, stdin=bzr_call.stdout, stdout=PIPE)
+        bzr_call.stdout.close()
+        title, upstream = grep_call.communicate()[0].strip().split(":", 1)
+        return upstream.strip() == self.source
+
+    def get(self, dest, options=None):
+        if not options:
+            options = {}
+
+        if os.path.exists(dest):
+            # if the parent is the same, update the branch
+            if self.is_same_branch(dest):
+                self.update_branch(dest)
+            elif options.get("overwrite"):
+                logging.info("Overwriting {}".format(dest))
+                shutil.rmtree(dest)
+                self.checkout_branch(dest)
+            else:
+                logging.info("Skipping existing dest {}".format(dest))
+                return
+        else:
+            self.checkout_branch(dest)
         if "revno" in options:
-            cmd = ('bzr', 'update', 'dest', '-r', options['revno'])
+            self.revno_branch(dest, options["revno"])
 
 
 class HttpFileHandler(SourceHandler):
