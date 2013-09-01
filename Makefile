@@ -7,3 +7,6 @@ install:
 clean:
 	rm -rf build codetree.egg-info dist
 	find . -name \*.pyc -delete
+
+test:
+	nosetests tests/
