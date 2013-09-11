@@ -133,7 +133,7 @@ class LocalHandler(SourceHandler):
         if not options:
             options = {}
 
-        if dest == "@":
+        if self.source == "@":
             logging.info("Creating directory {}".format(dest))
             fileutils.mkdir(dest, overwrite=options.get("overwrite", False))
             return

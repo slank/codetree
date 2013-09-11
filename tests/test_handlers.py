@@ -11,6 +11,7 @@ from codetree.handlers import (
     log_failure,
     SourceHandler,
     BzrSourceHandler,
+    LocalHandler,
 )
 
 BzrURLs = (
@@ -156,3 +157,15 @@ class BzrSourceHandlerTest(TestCase):
         options = {"revno": "1"}
         bh.get(dest, options)
         assert(called_with_cmd(_call, ('bzr', 'update', dest, '-r', revno)))
+
+
+class TestLocalHandler(TestCase):
+    def test_url_handling(self):
+        for local_url in LocalURLs:
+            assert(urlparse(local_url).scheme in LocalHandler.schemes)
+
+    @patch("codetree.handlers.fileutils.mkdir")
+    def creates_directory(self, _mkdir):
+        lh = LocalHandler("@")
+        lh.get("foo")
+        _mkdir.assert_called_with('foo', overwrite=False)
