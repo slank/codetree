@@ -1,3 +1,4 @@
+import os
 from unittest import TestCase
 from urlparse import urlparse
 
@@ -106,6 +107,15 @@ class BzrSourceHandlerTest(TestCase):
         bh = BzrSourceHandler(source)
         bh.get(dest)
         assert(called_with_cmd(_call, ('bzr', 'branch', source, dest)))
+
+    @patch("codetree.handlers.check_output")
+    @patch("codetree.handlers.os.makedirs")
+    def test_creates_new_dirs(self, _makedirs, _call):
+        source = BzrURLs[0]
+        dest = "foo/bar/baz"
+        bh = BzrSourceHandler(source)
+        bh.get(dest)
+        _makedirs.assert_called_with(os.path.dirname(dest))
 
     @patch("codetree.handlers.check_output")
     @patch("codetree.handlers.os.path.exists", return_value=True)
