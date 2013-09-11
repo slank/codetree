@@ -8,6 +8,7 @@ from mock import (
 )
 
 from codetree.handlers import (
+    log_failure,
     SourceHandler,
     BzrSourceHandler,
 )
@@ -39,6 +40,23 @@ def called_with_cmd(mock, cmd):
     for call_args in mock.call_args_list:
         if call_args[0][0] == cmd:
             return True
+
+
+class TestLogHandlers(TestCase):
+    @patch("codetree.handlers.check_output")
+    def test_log_failure_success(self, _call):
+        cmd = ("echo", "hello world")
+        log_failure(cmd, "Saying hello")
+        assert(called_with_cmd(_call, cmd))
+
+    def test_log_failure_failure(self):
+        # Throws OSError
+        cmd = ("/invalid/cmd", "hello world")
+        log_failure(cmd, "Saying hello")
+
+        # Throws CalledProcessError
+        cmd = ("false",)
+        log_failure(cmd, "Failing")
 
 
 class TestSourceHandler(TestCase):
