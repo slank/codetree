@@ -19,8 +19,10 @@ def log_failure(cmd, message):
         with open(os.devnull) as devnull:
             logging.info(message)
             check_output(cmd, stderr=devnull)
-    except CalledProcessError, e:
+    except CalledProcessError as e:
         logging.error(e.output)
+    except OSError as e:
+        logging.error(e.message)
 
 
 class SourceHandler(object):
