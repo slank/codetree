@@ -11,7 +11,7 @@ from codetree.handlers import (
     BzrSourceHandler,
 )
 
-BzrUrls = (
+BzrURLs = (
     "bzr://example.com/foo",
     "lp:debian/apt",
     "bzr+ssh://bazaar.launchpad.net/~foo/bar/trunk",
@@ -19,12 +19,12 @@ BzrUrls = (
     "bzr+https://example.com/foo",
 )
 
-HttpUrls = (
+HttpURLs = (
     "http://example.com/foo.txt",
     "https://example.com/foo.txt",
 )
 
-LocalUrls = (
+LocalURLs = (
     "file:///etc/hosts",
     "/etc/hosts",
     "etc/hosts",
@@ -55,11 +55,11 @@ class TestSourceHandler(TestCase):
 
 class BzrSourceHandlerTest(TestCase):
     def test_url_handling(self):
-        for url in BzrUrls:
+        for url in BzrURLs:
             assert(urlparse(url).scheme in BzrSourceHandler.schemes)
 
     def test_stores_source(self):
-        url = BzrUrls[0]
+        url = BzrURLs[0]
         bh = BzrSourceHandler(url)
         self.assertEqual(bh.source, url)
 
@@ -77,7 +77,7 @@ class BzrSourceHandlerTest(TestCase):
     @patch("codetree.handlers.os.path.exists", return_value=True)
     @patch("codetree.handlers.shutil.rmtree")
     def test_overwite(self, _rmtree, _exists, _log, _call):
-        source = BzrUrls[0]
+        source = BzrURLs[0]
         dest = "foo"
         bh = BzrSourceHandler(source)
         bh.is_same_branch = MagicMock(return_value=False)
@@ -101,7 +101,7 @@ class BzrSourceHandlerTest(TestCase):
     @patch("codetree.handlers.check_output")
     @patch("codetree.handlers.os.path.exists", return_value=False)
     def test_branches_new(self, _exists, _call):
-        source = BzrUrls[0]
+        source = BzrURLs[0]
         dest = "foo"
         bh = BzrSourceHandler(source)
         bh.get(dest)
@@ -110,7 +110,7 @@ class BzrSourceHandlerTest(TestCase):
     @patch("codetree.handlers.check_output")
     @patch("codetree.handlers.os.path.exists", return_value=True)
     def test_updates_existing(self, _exists, _call):
-        source = BzrUrls[0]
+        source = BzrURLs[0]
         dest = "foo"
         bh = BzrSourceHandler(source)
         bh.is_same_branch = MagicMock(return_value=True)
@@ -119,7 +119,7 @@ class BzrSourceHandlerTest(TestCase):
 
     @patch("codetree.handlers.check_output")
     def test_gets_revno(self, _call):
-        source = BzrUrls[0]
+        source = BzrURLs[0]
         dest = "foo"
         bh = BzrSourceHandler(source)
         bh.is_same_branch = MagicMock()
