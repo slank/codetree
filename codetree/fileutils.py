@@ -61,10 +61,10 @@ def link(source, dest=None, symbolic=True):
         mklink = os.link
 
     try:
-        if os.path.isabs(source):
+        if os.path.isabs(dest):
             mklink(source, dest)
         else:
-            with cd(os.path.dirname(source)):
+            with cd(os.path.dirname(dest)):
                 mklink(source, os.path.basename(dest))
     except OSError as e:
         raise FileManipulationError(e.message)
