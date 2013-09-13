@@ -72,8 +72,11 @@ class BzrSourceHandler(SourceHandler):
         bzr_call = Popen(bzr_cmd, stdout=PIPE)
         grep_call = Popen(grep_cmd, stdin=bzr_call.stdout, stdout=PIPE)
         bzr_call.stdout.close()
-        title, upstream = grep_call.communicate()[0].strip().split(":", 1)
-        return upstream.strip() == self.source
+        output = grep_call.communicate()[0].strip()
+        if output:
+            title, upstream = output.split(":", 1)
+            return upstream.strip() == self.source
+        return False
 
     def get(self, dest, options=None):
         if not options:

@@ -1,10 +1,18 @@
 import os
 from unittest import TestCase
 from urlparse import urlparse
+from tempfile import mkdtemp
+import subprocess
+import shutil
+try:
+    from cStringIO import StringIO
+except:
+    from StringIO import StringIO
 
 from mock import (
     patch,
     MagicMock,
+    mock_open,
 )
 
 from codetree.handlers import (
@@ -12,6 +20,7 @@ from codetree.handlers import (
     SourceHandler,
     BzrSourceHandler,
     LocalHandler,
+    HttpFileHandler,
 )
 
 BzrURLs = (
@@ -37,10 +46,20 @@ LocalURLs = (
 )
 
 
-def called_with_cmd(mock, cmd):
+def was_called_with_cmd(mock, cmd):
     for call_args in mock.call_args_list:
         if call_args[0][0] == cmd:
             return True
+
+
+def shellcmd(cmd):
+    try:
+        subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError as e:
+        print "------- output --------"
+        print e.output
+        print "-----------------------"
+        raise
 
 
 class TestLogHandlers(TestCase):
@@ -48,7 +67,7 @@ class TestLogHandlers(TestCase):
     def test_log_failure_success(self, _call):
         cmd = ("echo", "hello world")
         log_failure(cmd, "Saying hello")
-        assert(called_with_cmd(_call, cmd))
+        assert(was_called_with_cmd(_call, cmd))
 
     def test_log_failure_failure(self):
         # Throws OSError
@@ -125,7 +144,7 @@ class BzrSourceHandlerTest(TestCase):
         dest = "foo"
         bh = BzrSourceHandler(source)
         bh.get(dest)
-        assert(called_with_cmd(_call, ('bzr', 'branch', source, dest)))
+        assert(was_called_with_cmd(_call, ('bzr', 'branch', source, dest)))
 
     @patch("codetree.handlers.check_output")
     @patch("codetree.handlers.os.makedirs")
@@ -144,7 +163,7 @@ class BzrSourceHandlerTest(TestCase):
         bh = BzrSourceHandler(source)
         bh.is_same_branch = MagicMock(return_value=True)
         bh.get(dest)
-        assert(called_with_cmd(_call, ('bzr', 'pull', '-d', dest)))
+        assert(was_called_with_cmd(_call, ('bzr', 'pull', '-d', dest)))
 
     @patch("codetree.handlers.check_output")
     def test_gets_revno(self, _call):
@@ -156,7 +175,31 @@ class BzrSourceHandlerTest(TestCase):
         revno = "1"
         options = {"revno": "1"}
         bh.get(dest, options)
-        assert(called_with_cmd(_call, ('bzr', 'update', dest, '-r', revno)))
+        assert(was_called_with_cmd(_call, ('bzr', 'update', dest, '-r', revno)))
+
+    def test_same_branch(self):
+        parent = mkdtemp()
+        self.addCleanup(shutil.rmtree, parent)
+        shellcmd("bzr init {}".format(parent))
+        bh = BzrSourceHandler(parent)
+
+        child_tmp = mkdtemp()
+        self.addCleanup(shutil.rmtree, child_tmp)
+
+        # is same
+        child = os.path.join(child_tmp, "child")
+        shellcmd("bzr branch {} {}".format(parent, child))
+        self.assertTrue(bh.is_same_branch(child))
+
+        # is not the same
+        nonchild = os.path.join(child_tmp, "nonchild")
+        shellcmd("bzr branch {} {}".format(child, nonchild))
+        self.assertFalse(bh.is_same_branch(nonchild))
+
+        # is standalone
+        stdalone = os.path.join(child_tmp, "stdalone")
+        shellcmd("bzr init {}".format(stdalone))
+        self.assertFalse(bh.is_same_branch(stdalone))
 
 
 class TestLocalHandler(TestCase):
@@ -169,3 +212,21 @@ class TestLocalHandler(TestCase):
         lh = LocalHandler("@")
         lh.get("foo")
         _mkdir.assert_called_with('foo', overwrite=False)
+
+
+class TestHttpFileHandler(TestCase):
+    def test_url_handling(self):
+        for http_url in HttpURLs:
+            assert(urlparse(http_url).scheme in HttpFileHandler.schemes)
+
+    @patch('codetree.handlers.os.unlink')
+    @patch('codetree.handlers.os.path.exists')
+    @patch('codetree.handlers.urllib2.urlopen')
+    def test_gets_file(self, _urlopen, _exists, _unlink):
+        _urlopen.return_value = StringIO("words words")
+        hh = HttpFileHandler(HttpURLs[0])
+        _open = mock_open()
+        with patch('codetree.handlers.open', _open, create=True):
+            hh.get('foo')
+        _open.assert_called_with("foo", "w")
+        _urlopen.assert_called_with(HttpURLs[0])
