@@ -92,11 +92,13 @@ class BzrSourceHandler(SourceHandler):
                 self.checkout_branch(dest)
             else:
                 logging.info("Skipping existing dest {}".format(dest))
-                return
+                return False
         else:
             self.checkout_branch(dest)
         if "revno" in options:
             self.revno_branch(dest, options["revno"])
+
+        return True
 
 
 class HttpFileHandler(SourceHandler):
@@ -115,14 +117,16 @@ class HttpFileHandler(SourceHandler):
                 os.unlink(dest)
             else:
                 logging.info("Skipping existing dest {}".format(dest))
-                return
+                return False
         logging.info("Downloading {} to {}".format(self.source, dest))
         try:
             response = urllib2.urlopen(self.source)
         except urllib2.URLError as e:
             logging.error("Failed to download {}: {}".format(self.source, e.reason))
+            return False
         with open(dest, "w") as f:
             f.write(response.read())
+        return True
 
 
 class LocalHandler(SourceHandler):
@@ -141,7 +145,7 @@ class LocalHandler(SourceHandler):
         if self.source == "@":
             logging.info("Creating directory {}".format(dest))
             fileutils.mkdir(dest, overwrite=options.get("overwrite", False))
-            return
+            return True
 
         method = options.get("method", "copy")
         if method == "copy":
@@ -156,6 +160,8 @@ class LocalHandler(SourceHandler):
         elif method == "hardlink":
             logging.info("Creating hard link {} to {}".format(dest, self.source))
             fileutils.link(self.source, dest, symbolic=False)
+
+        return True
 
 
 class DuplicateHandlerError(Exception):

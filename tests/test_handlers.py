@@ -2,6 +2,7 @@ import os
 from unittest import TestCase
 from urlparse import urlparse
 from tempfile import mkdtemp
+from urllib2 import URLError
 import subprocess
 import shutil
 try:
@@ -123,18 +124,18 @@ class BzrSourceHandlerTest(TestCase):
 
         # overwrite (delete) existing when asked
         options = {"overwrite": True}
-        bh.get(dest, options)
+        self.assertTrue(bh.get(dest, options))
         _rmtree.assert_called_with(dest)
 
         # don't overwrite if not asked
         options = {"overwrite": False}
-        bh.get(dest, options)
+        self.assertFalse(bh.get(dest, options))
         _rmtree.assert_not_called()
 
         # don't overwrite if source = parent
         options = {"overwrite": True}
         bh.is_same_branch = MagicMock(return_value=True)
-        bh.get(dest, options)
+        self.assertTrue(bh.get(dest, options))
         _rmtree.assert_not_called()
 
     @patch("codetree.handlers.check_output")
@@ -143,8 +144,8 @@ class BzrSourceHandlerTest(TestCase):
         source = BzrURLs[0]
         dest = "foo"
         bh = BzrSourceHandler(source)
-        bh.get(dest)
-        assert(was_called_with_cmd(_call, ('bzr', 'branch', source, dest)))
+        self.assertTrue(bh.get(dest))
+        self.assertTrue(was_called_with_cmd(_call, ('bzr', 'branch', source, dest)))
 
     @patch("codetree.handlers.check_output")
     @patch("codetree.handlers.os.makedirs")
@@ -152,7 +153,7 @@ class BzrSourceHandlerTest(TestCase):
         source = BzrURLs[0]
         dest = "foo/bar/baz"
         bh = BzrSourceHandler(source)
-        bh.get(dest)
+        self.assertTrue(bh.get(dest))
         _makedirs.assert_called_with(os.path.dirname(dest))
 
     @patch("codetree.handlers.check_output")
@@ -162,7 +163,7 @@ class BzrSourceHandlerTest(TestCase):
         dest = "foo"
         bh = BzrSourceHandler(source)
         bh.is_same_branch = MagicMock(return_value=True)
-        bh.get(dest)
+        self.assertTrue(bh.get(dest))
         assert(was_called_with_cmd(_call, ('bzr', 'pull', '-d', dest)))
 
     @patch("codetree.handlers.check_output")
@@ -174,7 +175,7 @@ class BzrSourceHandlerTest(TestCase):
 
         revno = "1"
         options = {"revno": "1"}
-        bh.get(dest, options)
+        self.assertTrue(bh.get(dest, options))
         assert(was_called_with_cmd(_call, ('bzr', 'update', dest, '-r', revno)))
 
     def test_same_branch(self):
@@ -210,7 +211,7 @@ class TestLocalHandler(TestCase):
     @patch("codetree.handlers.fileutils.mkdir")
     def creates_directory(self, _mkdir):
         lh = LocalHandler("@")
-        lh.get("foo")
+        self.assertTrue(lh.get("foo"))
         _mkdir.assert_called_with('foo', overwrite=False)
 
 
@@ -223,10 +224,68 @@ class TestHttpFileHandler(TestCase):
     @patch('codetree.handlers.os.path.exists')
     @patch('codetree.handlers.urllib2.urlopen')
     def test_gets_file(self, _urlopen, _exists, _unlink):
+        destfile = "foo"
+
         _urlopen.return_value = StringIO("words words")
         hh = HttpFileHandler(HttpURLs[0])
+
+        # New file
         _open = mock_open()
+        _exists.return_value = False
         with patch('codetree.handlers.open', _open, create=True):
-            hh.get('foo')
-        _open.assert_called_with("foo", "w")
+            self.assertTrue(hh.get(destfile))
+        self.assertFalse(_unlink.called)
+        _open.assert_called_with(destfile, "w")
         _urlopen.assert_called_with(HttpURLs[0])
+
+    @patch('codetree.handlers.os.unlink')
+    @patch('codetree.handlers.os.path.exists')
+    @patch('codetree.handlers.urllib2.urlopen')
+    def test_gets_file_no_overwrite(self, _urlopen, _exists, _unlink):
+        destfile = "foo"
+
+        _urlopen.return_value = StringIO("words words")
+        hh = HttpFileHandler(HttpURLs[0])
+
+        # Existing file
+        _open = mock_open()
+        _exists.return_value = True
+        with patch('codetree.handlers.open', _open, create=True):
+            self.assertFalse(hh.get(destfile))
+        self.assertFalse(_unlink.called)
+        self.assertFalse(_open.called)
+        self.assertFalse(_urlopen.called)
+
+    @patch('codetree.handlers.os.unlink')
+    @patch('codetree.handlers.os.path.exists')
+    @patch('codetree.handlers.urllib2.urlopen')
+    def test_gets_file_with_overwite(self, _urlopen, _exists, _unlink):
+        destfile = "foo"
+
+        _urlopen.return_value = StringIO("words words")
+        hh = HttpFileHandler(HttpURLs[0])
+
+        # Overwrite existing file
+        _open = mock_open()
+        _exists.return_value = True
+        with patch('codetree.handlers.open', _open, create=True):
+            self.assertTrue(hh.get(destfile, options={"overwrite": True}))
+        _unlink.assert_called_with(destfile)
+        _open.assert_called_with(destfile, "w")
+        _urlopen.assert_called_with(HttpURLs[0])
+
+    @patch('codetree.handlers.os.unlink')
+    @patch('codetree.handlers.os.path.exists')
+    @patch('codetree.handlers.urllib2.urlopen')
+    def test_gets_file_bad_url(self, _urlopen, _exists, _unlink):
+        destfile = "foo"
+
+        _urlopen.return_value = StringIO("words words")
+        hh = HttpFileHandler(HttpURLs[0])
+
+        # Broken source
+        _open = mock_open()
+        _exists.return_value = False
+        _urlopen.side_effect = URLError('failed')
+        with patch('codetree.handlers.open', _open, create=True):
+            self.assertFalse(hh.get(destfile))
