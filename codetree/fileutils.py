@@ -1,6 +1,7 @@
 import subprocess
 import shutil
 import os
+import errno
 from contextlib import contextmanager
 
 
@@ -74,6 +75,10 @@ def mkdir(dirname, overwrite=False):
     if os.path.exists(dirname):
         if overwrite:
             shutil.rmtree(dirname)
+    try:
+        os.makedirs(dirname)
+    except OSError as e:
+        if e.errno == errno.EEXIST and os.path.isdir(dirname):
+            pass
         else:
-            raise FileManipulationError("Creation of directory would overwrite existing {}".format(dirname))
-    os.makedirs(dirname)
+            raise FileManipulationError("Creation of directory failed: {}".format(dirname), e)
