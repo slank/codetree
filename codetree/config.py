@@ -38,7 +38,7 @@ class Directive(object):
         return url, options
 
     def run(self):
-        self.source.get(self.location, self.source_options)
+        return self.source.get(self.location, self.source_options)
 
 
 class Config(object):
@@ -62,7 +62,13 @@ class Config(object):
             return True
         return False
 
-    def build(self):
+    def build(self, fatality=False):
+        error_free = True
         for i in range(len(self.directives)):
             directive = heapq.heappop(self.directives)[1]
-            directive.run()
+            result = directive.run()
+            if not result:
+                error_free = False
+                if fatality:
+                    return False
+        return error_free

@@ -1,6 +1,7 @@
 from argparse import ArgumentParser
 import logging
 from .config import Config
+import sys
 
 
 def main():
@@ -9,6 +10,8 @@ def main():
     verbosity = ap.add_mutually_exclusive_group(required=False)
     verbosity.add_argument("-v", "--verbose", action="store_true", default=False)
     verbosity.add_argument("-q", "--quiet", action="store_true", default=False)
+    verbosity.add_argument("-f", "--fatality", action="store_true", default=False,
+                           help="Any error is fatal")
 
     args = ap.parse_args()
 
@@ -22,4 +25,7 @@ def main():
     logging.basicConfig(format=logfmt, level=loglevel)
 
     config = Config(args.cfgfile)
-    config.build()
+    if config.build(args.fatality):
+        sys.exit(0)
+    else:
+        sys.exit(1)

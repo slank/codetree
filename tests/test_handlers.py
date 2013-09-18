@@ -25,11 +25,12 @@ from codetree.handlers import (
 )
 
 BzrURLs = (
-    "bzr://example.com/foo",
+    "bzr://example.com/foo/",
+    "lp:debian/apt/",
+    "bzr+ssh://bazaar.launchpad.net/~foo/bar/trunk/",
+    "bzr+http://example.com/foo/",
+    "bzr+https://example.com/foo/",
     "lp:debian/apt",
-    "bzr+ssh://bazaar.launchpad.net/~foo/bar/trunk",
-    "bzr+http://example.com/foo",
-    "bzr+https://example.com/foo",
 )
 
 HttpURLs = (
@@ -51,6 +52,7 @@ def was_called_with_cmd(mock, cmd):
     for call_args in mock.call_args_list:
         if call_args[0][0] == cmd:
             return True
+    return False
 
 
 def shellcmd(cmd):
@@ -188,19 +190,19 @@ class BzrSourceHandlerTest(TestCase):
         self.addCleanup(shutil.rmtree, child_tmp)
 
         # is same
-        child = os.path.join(child_tmp, "child")
+        child = os.path.join(child_tmp, "child") + "/"
         shellcmd("bzr branch {} {}".format(parent, child))
         self.assertTrue(bh.is_same_branch(child))
 
         # is not the same
         nonchild = os.path.join(child_tmp, "nonchild")
         shellcmd("bzr branch {} {}".format(child, nonchild))
-        self.assertFalse(bh.is_same_branch(nonchild))
+        self.assertFalse(bh.is_same_branch(nonchild), "test: is not same")
 
         # is standalone
         stdalone = os.path.join(child_tmp, "stdalone")
         shellcmd("bzr init {}".format(stdalone))
-        self.assertFalse(bh.is_same_branch(stdalone))
+        self.assertFalse(bh.is_same_branch(stdalone), "test: is standalone")
 
 
 class TestLocalHandler(TestCase):
