@@ -139,6 +139,9 @@ class BzrSourceHandlerTest(TestCase):
         self.assertTrue(bh.get(dest, options))
         _rmtree.assert_called_with(dest)
 
+        bh.checkout_branch = MagicMock(return_value=False)
+        self.assertFalse(bh.get(dest, options))
+
         # don't overwrite if not asked
         options = {"overwrite": False}
         self.assertFalse(bh.get(dest, options))
@@ -159,6 +162,9 @@ class BzrSourceHandlerTest(TestCase):
         self.assertTrue(bh.get(dest))
         self.assertTrue(was_called_with_cmd(_call, ('bzr', 'branch', source, dest)))
 
+        bh.checkout_branch = MagicMock(return_value=False)
+        self.assertFalse(bh.get(dest))
+
     @patch("codetree.handlers.check_output")
     @patch("codetree.handlers.os.makedirs")
     def test_creates_new_dirs(self, _makedirs, _call):
@@ -177,6 +183,9 @@ class BzrSourceHandlerTest(TestCase):
         bh.is_same_branch = MagicMock(return_value=True)
         self.assertTrue(bh.get(dest))
         assert(was_called_with_cmd(_call, ('bzr', 'pull', '-d', dest)))
+
+        bh.update_branch = MagicMock(return_value=False)
+        self.assertFalse(bh.get(dest))
 
     @patch("codetree.handlers.check_output")
     def test_gets_revno(self, _call):
