@@ -18,6 +18,7 @@ from mock import (
 
 from codetree.handlers import (
     log_failure,
+    CommandFailure,
     SourceHandler,
     BzrSourceHandler,
     LocalHandler,
@@ -75,11 +76,14 @@ class TestLogHandlers(TestCase):
     def test_log_failure_failure(self):
         # Throws OSError
         cmd = ("/invalid/cmd", "hello world")
-        log_failure(cmd, "Saying hello")
+        self.assertFalse(log_failure(cmd, "Saying hello"))
+        with self.assertRaises(CommandFailure):
+            log_failure(cmd, "Failing", fatal=True)
 
-        # Throws CalledProcessError
         cmd = ("false",)
-        log_failure(cmd, "Failing")
+        self.assertFalse(log_failure(cmd, "Failing"))
+        with self.assertRaises(CommandFailure):
+            log_failure(cmd, "Failing", fatal=True)
 
 
 class TestSourceHandler(TestCase):
