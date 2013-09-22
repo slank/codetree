@@ -17,6 +17,7 @@ from mock import (
 )
 
 from codetree.handlers import (
+    strip_trailing_slash,
     log_failure,
     CommandFailure,
     SourceHandler,
@@ -84,6 +85,11 @@ class TestLogHandlers(TestCase):
         self.assertFalse(log_failure(cmd, "Failing"))
         with self.assertRaises(CommandFailure):
             log_failure(cmd, "Failing", fatal=True)
+
+    def test_strip_trailing_slash(self):
+        value = "abc"
+        self.assertEqual(value, strip_trailing_slash(value))
+        self.assertEqual(value, strip_trailing_slash(value + "/"))
 
 
 class TestSourceHandler(TestCase):
