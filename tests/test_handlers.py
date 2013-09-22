@@ -230,10 +230,42 @@ class TestLocalHandler(TestCase):
             assert(urlparse(local_url).scheme in LocalHandler.schemes)
 
     @patch("codetree.handlers.fileutils.mkdir")
-    def creates_directory(self, _mkdir):
+    def test_creates_directory(self, _mkdir):
         lh = LocalHandler("@")
         self.assertTrue(lh.get("foo"))
         _mkdir.assert_called_with('foo', overwrite=False)
+
+    @patch("codetree.handlers.fileutils.copy")
+    def test_copies_files_dirs(self, _copy):
+        lh = LocalHandler("/some/file")
+        options = {"method": "copy"}
+        self.assertTrue(lh.get("foo", options))
+        _copy.assert_called_with("/some/file", "foo")
+
+    @patch("codetree.handlers.fileutils.rsync")
+    def test_rsyncs_files_dirs(self, _rsync):
+        lh = LocalHandler("/some/file")
+        options = {"method": "rsync"}
+        self.assertTrue(lh.get("foo", options))
+        _rsync.assert_called_with("/some/file", "foo")
+
+    @patch("codetree.handlers.fileutils.link")
+    def test_links_files_dirs(self, _link):
+        lh = LocalHandler("/some/file")
+        # symbolic link
+        options = {"method": "link"}
+        self.assertTrue(lh.get("foo", options))
+        _link.assert_called_with("/some/file", "foo")
+        # hard link
+        options = {"method": "hardlink"}
+        self.assertTrue(lh.get("foo", options))
+        _link.assert_called_with("/some/file", "foo", symbolic=False)
+
+    @patch("codetree.handlers.fileutils.copy")
+    def test_copy_is_default(self, _copy):
+        lh = LocalHandler("/some/file")
+        self.assertTrue(lh.get("foo"))
+        _copy.assert_called_with("/some/file", "foo")
 
 
 class TestHttpFileHandler(TestCase):
