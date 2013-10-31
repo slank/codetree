@@ -21,6 +21,9 @@ class CommandFailure(Exception):
         self.message = message
         self.original_exception = original_exception
 
+class NotABranch(Exception):
+        pass
+
 class NotSameBranch(Exception):
     pass
 
@@ -120,13 +123,11 @@ class BzrSourceHandler(SourceHandler):
     def get(self, dest, options=None):
         if not options:
             options = {}
-
+        if not self.is_bzr_branch(self.source):
+            raise NotABranch("{} is not a bzr branch. Is it a private branch? Check permissions on the branch.".format(self.source))
         if os.path.exists(dest):
-            if not self.is_bzr_branch(self.source):
-                print("{} is not a bzr branch. Is it a private branch? check permissions on the branch.".format(dest))
-                return False
             if not self.is_bzr_branch(dest):
-                print("{} is not a bzr branch, it may be an empty directory".format(dest))
+                raise NotABranch("{} is not a bzr branch, it may be an empty directory".format(dest))
                 return False
             # if the parent is the same, update the branch
             if self.is_same_branch(dest):
