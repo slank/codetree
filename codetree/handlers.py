@@ -112,6 +112,10 @@ class BzrSourceHandler(SourceHandler):
         return False
 
     def is_bzr_branch(self, branch):
+        if branch.startswith('lp:'):
+            if not '~' in branch:
+                branch = branch.replace('lp:', 'lp:+branch/')
+            branch = branch.replace('lp:', 'bzr+ssh://bazaar.launchpad.net/')
         bzr_cmd = ("bzr", "info", branch)
         devnull = open('/dev/null', 'w')
         try:
