@@ -95,7 +95,10 @@ class BzrSourceHandler(SourceHandler):
 
     def is_same_branch(self, dest):
         self.source = strip_trailing_slash(self.source).strip()
-        self.source = self.source.replace('lp:', 'bzr+ssh://bazaar.launchpad.net/')
+        if self.source.startswith('lp:'):
+            if not '~' in self.source:
+                self.source = self.source.replace('lp:', 'lp:+branch/')
+            self.source = self.source.replace('lp:', 'bzr+ssh://bazaar.launchpad.net/')
         bzr_cmd = ("bzr", "info", dest)
         grep_cmd = ("grep", "parent branch")
         bzr_call = Popen(bzr_cmd, stdout=PIPE)
