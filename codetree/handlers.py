@@ -116,7 +116,7 @@ class BzrSourceHandler(SourceHandler):
             if not '~' in branch:
                 branch = branch.replace('lp:', 'lp:+branch/')
             branch = branch.replace('lp:', 'bzr+ssh://bazaar.launchpad.net/')
-        bzr_cmd = ("bzr", "info", branch)
+        bzr_cmd = ("bzr", "revno", branch)
         devnull = open('/dev/null', 'w')
         try:
            check_call(bzr_cmd, stdout=devnull)
