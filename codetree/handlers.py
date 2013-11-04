@@ -93,12 +93,16 @@ class BzrSourceHandler(SourceHandler):
         cmd = ('bzr', 'update', dest, '-r', revno)
         return log_failure(cmd, "Checking out revision {} of {}".format(revno, self.source))
 
+    def normalize_lp_branch(self, branch):
+        if branch.startswith('lp:'):
+            if not '~' in branch:
+                branch = branch.replace('lp:', 'lp:+branch/')
+            branch = branch.replace('lp:', 'bzr+ssh://bazaar.launchpad.net/')
+        return branch
+
     def is_same_branch(self, dest):
         self.source = strip_trailing_slash(self.source).strip()
-        if self.source.startswith('lp:'):
-            if not '~' in self.source:
-                self.source = self.source.replace('lp:', 'lp:+branch/')
-            self.source = self.source.replace('lp:', 'bzr+ssh://bazaar.launchpad.net/')
+        self.source = self.normalize_lp_branch(self.source)
         bzr_cmd = ("bzr", "info", dest)
         grep_cmd = ("grep", "parent branch")
         bzr_call = Popen(bzr_cmd, stdout=PIPE)
@@ -112,10 +116,7 @@ class BzrSourceHandler(SourceHandler):
         return False
 
     def is_bzr_branch(self, branch):
-        if branch.startswith('lp:'):
-            if not '~' in branch:
-                branch = branch.replace('lp:', 'lp:+branch/')
-            branch = branch.replace('lp:', 'bzr+ssh://bazaar.launchpad.net/')
+        branch = self.normalize_lp_branch(branch)
         bzr_cmd = ("bzr", "revno", branch)
         devnull = open('/dev/null', 'w')
         try:
