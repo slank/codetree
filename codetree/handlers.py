@@ -7,6 +7,7 @@ from subprocess import (
     STDOUT,
     check_output,
     CalledProcessError,
+    check_call,
 )
 import os
 import logging
@@ -20,6 +21,11 @@ class CommandFailure(Exception):
         self.message = message
         self.original_exception = original_exception
 
+class NotABranch(Exception):
+        pass
+
+class NotSameBranch(Exception):
+    pass
 
 def log_failure(cmd, message, fatal=False):
     try:
@@ -87,7 +93,16 @@ class BzrSourceHandler(SourceHandler):
         cmd = ('bzr', 'update', dest, '-r', revno)
         return log_failure(cmd, "Checking out revision {} of {}".format(revno, self.source))
 
+    def normalize_lp_branch(self, branch):
+        if branch.startswith('lp:'):
+            if not '~' in branch:
+                branch = branch.replace('lp:', 'lp:+branch/')
+            branch = branch.replace('lp:', 'bzr+ssh://bazaar.launchpad.net/')
+        return branch
+
     def is_same_branch(self, dest):
+        self.source = strip_trailing_slash(self.source).strip()
+        self.source = self.normalize_lp_branch(self.source)
         bzr_cmd = ("bzr", "info", dest)
         grep_cmd = ("grep", "parent branch")
         bzr_call = Popen(bzr_cmd, stdout=PIPE)
@@ -96,14 +111,32 @@ class BzrSourceHandler(SourceHandler):
         output = grep_call.communicate()[0].strip()
         if output:
             title, upstream = output.split(":", 1)
-            return strip_trailing_slash(upstream.strip()) == strip_trailing_slash(self.source)
+            self.dest_source = strip_trailing_slash(upstream).strip()
+            return self.dest_source == self.source
         return False
+
+    def is_bzr_branch(self, branch):
+        branch = self.normalize_lp_branch(branch)
+        bzr_cmd = ("bzr", "revno", branch)
+        devnull = open('/dev/null', 'w')
+        try:
+           check_call(bzr_cmd, stdout=devnull)
+           return True
+        except CalledProcessError as e:
+            if e.returncode == 3:
+                return False
+            else:
+                raise e
 
     def get(self, dest, options=None):
         if not options:
             options = {}
-
+        if not self.is_bzr_branch(self.source):
+            raise NotABranch("{} is not a bzr branch. Is it a private branch? Check permissions on the branch.".format(self.source))
         if os.path.exists(dest):
+            if not self.is_bzr_branch(dest):
+                raise NotABranch("{} is not a bzr branch, it may be an empty directory".format(dest))
+                return False
             # if the parent is the same, update the branch
             if self.is_same_branch(dest):
                 if not self.update_branch(dest):
@@ -114,8 +147,7 @@ class BzrSourceHandler(SourceHandler):
                 if not self.checkout_branch(dest):
                     return False
             else:
-                logging.error("Skipping existing dest {}".format(dest))
-                return False
+                raise NotSameBranch("{} failed: {} and {} do not match".format(dest, self.dest_source, self.source))
         else:
             if not self.checkout_branch(dest):
                 return False
