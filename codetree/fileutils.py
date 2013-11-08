@@ -48,13 +48,21 @@ def rsync(source, dest, delete=True, perms=True, links=True, times=False):
         raise FileManipulationError(e.message)
 
 
-def link(source, dest=None, symbolic=True):
+def link(source, dest=None, symbolic=True, overwrite=False):
     if not dest:
         source_name = os.path.basename(source)
         current_dir = os.getcwd()
         dest = os.path.join(current_dir, source_name)
     if os.path.exists(dest):
+        # This won't trigger for a pre-existing symlink
         raise FileManipulationError("Destination already exists: {}".format(dest))
+    elif os.path.islink(dest):
+        # This will trigger for a pre-existing symlink
+        if overwrite:
+            os.unlink(dest)
+        else:
+            raise FileManipulationError(
+                "Destination already exists as symlink: {}".format(dest))
 
     if symbolic:
         mklink = os.symlink
