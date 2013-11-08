@@ -200,7 +200,7 @@ class LocalHandler(SourceHandler):
 
         if self.source == "@":
             logging.info("Creating directory {}".format(dest))
-            fileutils.mkdir(dest, overwrite=options.get("overwrite", True))
+            fileutils.mkdir(dest, overwrite=options.get("overwrite", False))
             return True
 
         method = options.get("method", "copy")
@@ -213,7 +213,7 @@ class LocalHandler(SourceHandler):
         elif method == "link":
             logging.info("Creating symbolic link {} to {}".format(dest, self.source))
             fileutils.link(self.source, dest, overwrite=options.get(
-                "overwrite", False))
+                "overwrite", True))
         elif method == "hardlink":
             logging.info("Creating hard link {} to {}".format(dest, self.source))
             fileutils.link(self.source, dest, symbolic=False)
