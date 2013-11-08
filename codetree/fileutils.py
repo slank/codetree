@@ -48,7 +48,7 @@ def rsync(source, dest, delete=True, perms=True, links=True, times=False):
         raise FileManipulationError(e.message)
 
 
-def link(source, dest=None, symbolic=True, overwrite=False):
+def link(source, dest=None, symbolic=True, overwrite=True):
     if not dest:
         source_name = os.path.basename(source)
         current_dir = os.getcwd()

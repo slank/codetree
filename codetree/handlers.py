@@ -200,7 +200,7 @@ class LocalHandler(SourceHandler):
 
         if self.source == "@":
             logging.info("Creating directory {}".format(dest))
-            fileutils.mkdir(dest, overwrite=options.get("overwrite", False))
+            fileutils.mkdir(dest, overwrite=options.get("overwrite", True))
             return True
 
         method = options.get("method", "copy")
