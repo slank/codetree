@@ -212,7 +212,8 @@ class LocalHandler(SourceHandler):
             fileutils.rsync(self.source, dest)
         elif method == "link":
             logging.info("Creating symbolic link {} to {}".format(dest, self.source))
-            fileutils.link(self.source, dest)
+            fileutils.link(self.source, dest, overwrite=options.get(
+                "overwrite", True))
         elif method == "hardlink":
             logging.info("Creating hard link {} to {}".format(dest, self.source))
             fileutils.link(self.source, dest, symbolic=False)
