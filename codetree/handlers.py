@@ -68,6 +68,9 @@ class BzrSourceHandler(SourceHandler):
         "lp",
         "bzr+http",
         "bzr+https",
+        "nosmart+bzr",
+        "nosmart+bzr+ssh",
+        "nosmart+lp",
     )
 
     def __init__(self, source):
@@ -94,7 +97,7 @@ class BzrSourceHandler(SourceHandler):
         return log_failure(cmd, "Checking out revision {} of {}".format(revno, self.source))
 
     def normalize_lp_branch(self, branch):
-        if branch.startswith('lp:'):
+        if branch.startswith(('lp:','nosmart+lp:')):
             if not '~' in branch:
                 branch = branch.replace('lp:', 'lp:+branch/')
             branch = branch.replace('lp:', 'bzr+ssh://bazaar.launchpad.net/')
